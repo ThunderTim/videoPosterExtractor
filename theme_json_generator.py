@@ -218,16 +218,30 @@ class ThemeJSONGenerator:
         
         if len(parts) < 3:
             return None
-            
-        category = parts[0]
-        order = parts[1]
-        title = '-'.join(parts[2:])
         
-        try:
-            order_num = int(order)
-        except ValueError:
+        # Find the first part that's a valid number (the order)
+        order_index = None
+        order_num = None
+        
+        for i, part in enumerate(parts):
+            try:
+                order_num = int(part)
+                order_index = i
+                break
+            except ValueError:
+                continue
+        
+        if order_index is None or order_index == 0:
             return None
-            
+        
+        # Everything before the number is the category
+        category = '-'.join(parts[:order_index])
+        # Everything after the number is the title
+        title = '-'.join(parts[order_index + 1:])
+        
+        if not title:
+            return None
+        
         return {
             'category': category,
             'categoryOrder': order_num,
@@ -463,7 +477,9 @@ class ThemeJSONGenerator:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             height, width = frame.shape[:2]
             
-            if self.is_split_screen(width, height):
+            # Check if this is an overlay file or split-screen
+            filename = Path(video_path).stem
+            if filename.startswith('overlay') or self.is_split_screen(width, height):
                 frame = frame[:, :width//2]
                 
             img = Image.fromarray(frame)
@@ -903,11 +919,11 @@ For full documentation, see:
                     error_msg += f"\n... and {len(errors) - 5} more errors"
                 messagebox.showwarning("Processing Complete with Errors", 
                                      f"{status_msg}\n\nXMP files moved to xmp_trash/\n\nErrors:\n{error_msg}")
-                self.root.quit()
+                
             else:
                 messagebox.showinfo("Success", 
                                   f"{status_msg}\n\nXMP files moved to xmp_trash/\n\nSaved to: {json_path.name}")
-                self.root.quit()
+                
         else:
             if not theme_data:
                 messagebox.showerror("Error", "No theme data found. Make sure theme exists or add theme preview video with THEME-NAME marker.")
